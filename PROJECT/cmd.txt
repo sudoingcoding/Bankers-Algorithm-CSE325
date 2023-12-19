@@ -1,0 +1,3 @@
+toilet -f term -F border --gay --width $(tput cols) --font big "BANKERS ALGORITHM" && toilet -f term -F border --gay --width $(tput cols) --font big "Made by Suddip Paul Arnab"
+
+
