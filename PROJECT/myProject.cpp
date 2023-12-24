@@ -1,5 +1,4 @@
 #include<bits/stdc++.h>
-#include <cstdlib>
 using namespace std;
 
 class Bankers {
@@ -7,6 +6,7 @@ public:
     int process;
     int resource;
     vector<int> resourceInstance;
+    vector<int> possessed;
     vector<int> available;
     vector<int> work;
     vector<bool> finish;
@@ -32,8 +32,9 @@ public:
             cin >> a;
             resourceInstance.push_back(a);
         }
-
+        cout << "\n";
         available.resize(resource);
+        possessed.resize(resource);
         work.resize(resource);
         finish.resize(process);
 
@@ -44,22 +45,10 @@ public:
     }
 
     void calcNeed() {
-        cout << "Current Resource Need: \n";
         for (int i = 0; i < process; i++) {
-            cout << "Process " << i << " \n";
             for (int j = 0; j < resource; j++) {
                 need[i][j] = Maximum[i][j] - allocated[i][j];
-                cout << "Resource " << j << " : " << need[i][j] << "\n";
             }
-        }
-    }
-
-    void displayNeed() {
-        for (const auto& row : need) {
-            for (int element : row) {
-                std::cout << element << " ";
-            }
-            std::cout << "\n";
         }
     }
 
@@ -68,103 +57,170 @@ public:
         for (int i = 0; i < process; i++) {
             cout << "Process " << i << ":\n";
             for (int j = 0; j < resource; j++) {
-                random_device rd;
-                mt19937 gen(rd());
-                uniform_int_distribution<> dist(1, resourceInstance[j]);
-                int num = dist(gen);
+                int num;
+                cin >> num;
                 allocated[i][j] = num;
-                cout << "Resource " << j << " : " << num << "\n";
             }
         }
     }
-
+    
     void Read() {
         cout << "Enter Maximum Resource Needed: \n";
+        cout << "\n";
         for (int i = 0; i < process; i++) {
             cout << "Process " << i << ":\n";
             for (int j = 0; j < resource; j++) {
-                cout << "Resource " << j << ": ";
                 int num;
                 cin >> num;
                 Maximum[i][j] = num;
             }
         }
+        cout << "\n";
         allocateResource();
+        cout << "\n";
+        fill(possessed.begin(), possessed.end(), 0);
+        fill(available.begin(), available.end(), 0);
+
+        for (int i = 0; i < resource; i++) {
+            int sum = 0;
+            for (int j = 0; j < process; j++) {
+                sum += allocated[j][i];
+            }
+            possessed[i] = sum;
+        }
+
+        for (int i = 0; i < resource; i++) {
+            available[i] = resourceInstance[i] - possessed[i];
+        }
+
+        fill(finish.begin(), finish.end(), false);
+        for (int i = 0; i < resource; i++) {
+            work[i] = available[i];
+        }
+
         calcNeed();
     }
 
-    bool CheckSafeState() {
+
+    void CheckSafeState() {
         queue<int> q;
         for (int i = 0; i < process; i++) q.push(i);
-
-        vector<int> work_copy = work;
-        vector<bool> finish_copy = finish;
-
-        int count = 0;
-        vector<int> safe_sequence;
+        int index = q.front();
+        int Current = 0;
+        vector<int> safeSequence;
 
         while (!q.empty()) {
-            int index = q.front();
-            q.pop();
-
-            if (!finish_copy[index] && CheckAllocation(index, work_copy)) {
-                safe_sequence.push_back(index);
-                finish_copy[index] = true;
+            if (!finish[index] && CheckAllocation(index)) {
                 for (int i = 0; i < resource; i++) {
-                    work_copy[i] += allocated[index][i];
+                    work[i] += allocated[index][i];
                 }
-                count = 0;
+
+                finish[index] = true;
+                safeSequence.push_back(index);
+                q.pop();
+                Current = 0;
+                index++;
             }
             else {
-                count++;
+                Current++;
+                index++;
+                if (index == process) index = 0;
+                if (Current == q.size() + 1) break;
+                continue;
             }
-
-            if (count == process) {
-                break;
-            }
-
-            if (q.empty()) {
-                for (int i = 0; i < process; i++) {
-                    if (!finish_copy[i]) {
-                        q.push(i);
-                        break;
-                    }
-                }
-            }
+            if (index == process) index = 0;
+            if (Current == q.size()) break;
         }
 
-        if (safe_sequence.size() == process) {
+        if (CheckFinish()) {
             cout << "Safe state\n";
             cout << "Safe sequence: ";
-            for (int i = 0; i < process; i++) {
-                cout << "Process " << safe_sequence[i];
-                if (i != process - 1) cout << " -> ";
+            for (int i = 0; i < safeSequence.size(); i++) {
+                cout << "Process" << safeSequence[i];
+                if (i != safeSequence.size() - 1) cout << " -> ";
             }
-            cout << endl;
-            return true;
+            cout << "\n";
         }
         else {
             cout << "Not Safe State - Deadlock detected\n";
-            return false;
         }
+        cout << "\n";
     }
 
-    bool CheckAllocation(int index, const vector<int>& work_copy) {
-        for (int i = 0; i < resource; i++) {
-            if (need[index][i] > work_copy[i]) return false;
+
+    bool CheckFinish() {
+        for (int i = 0; i < process; i++) {
+            if (!finish[i]) return false;
         }
         return true;
     }
+
+    bool CheckAllocation(int index) {
+        for (int i = 0; i < resource; i++) {
+            if (need[index][i] > work[i]) return false;
+        }
+        return true;
+    }
+    void printVectors() {
+        cout << "Resource Allocated matrix: \n";
+        for (const auto& row : allocated) {
+            for (int element : row) {
+                cout << element << " ";
+            }
+            cout << "\n";
+        }
+        cout << "\n";
+        cout << "Maximum matrix: \n";
+        for (const auto& row : Maximum) {
+            for (int element : row) {
+                cout << element << " ";
+            }
+            cout << "\n";
+        }
+        cout << "\n";
+        cout << "Need matrix: \n";
+        for (const auto& row : need) {
+            for (int element : row) {
+                cout << element << " ";
+            }
+            cout << "\n";
+        }
+        cout << "\n";
+        cout << "Existing resource: \n";
+        for (auto& c : resourceInstance) {
+            cout << c << " ";
+        }
+        cout << "\n";
+        cout << "\n";
+        cout << "Possessed resource: \n";
+        for (auto& c : possessed) {
+            cout << c << " ";
+        }
+        cout << "\n";
+        cout << "\n";
+        cout << "Available resource: \n";
+        for (auto& c : available) {
+            cout << c << " ";
+        }
+        cout << "\n";
+        cout << "\n";
+    }
+
+    
 };
 
 int main() {
-    system("bash cmd.txt");
     Bankers* b = new Bankers();
-    b->Read();
-    b->calcNeed();
-    b->displayNeed();
-    b->CheckSafeState();
+    while (1)
+    {
+        b->Read();
+        b->printVectors();
+        b->CheckSafeState();
+        cout << "Enter 1 to exit or press any number to continue \n";
+        int n;
+        cin >> n;
+        if (n == 1) break;
+    }
     delete b;
     return 0;
 }
-
